@@ -187,10 +187,41 @@ public class MainGame : MonoBehaviour
         // Check if the new position is within the bounds of the grid
         if (IsPositionWithinGrid(newPosition))
         {
-            sphere.transform.position = newPosition;
+            // Check if the target cube is already occupied by a sphere
+            if (!IsCubeOccupied(newPosition))
+            {
+                sphere.transform.position = newPosition;
+            }
+            else
+            {
+                Debug.LogWarning("Cannot move sphere. Target cube is already occupied.");
+            }
+        }
+        else
+        {
+            Debug.LogWarning("Cannot move sphere. Target position is outside the grid.");
         }
     }
 
+    // Function to check if a cube at a given position is already occupied by a sphere
+    bool IsCubeOccupied(Vector3 position)
+    {
+        // Iterate through all spheres to check if any sphere occupies the same cube
+        foreach (GameObject sphere in spheres)
+        {
+            // Calculate the difference in positions between the sphere and the target cube
+            Vector3 positionDifference = sphere.transform.position - position;
+
+            // Check if the position difference is very small, indicating the sphere is in the target cube
+            if (positionDifference.sqrMagnitude < 0.01f) // Adjust the threshold as needed
+            {
+                return true;
+            }
+        }
+
+        // If no sphere occupies the target cube, return false (cube is not occupied)
+        return false;
+    }
 
     // Function to create a new sphere
     void CreateSphere(Vector3 position, Color color)
@@ -287,14 +318,7 @@ public class MainGame : MonoBehaviour
         return position.x >= 0 && position.x < (Nx - 1) * spacing &&
                position.y >= 0 && position.y < (Ny - 1) * spacing;
     }
-
-
 }
-
-
-
-
-
 
 
 
