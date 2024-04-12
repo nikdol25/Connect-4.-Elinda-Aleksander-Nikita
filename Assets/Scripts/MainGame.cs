@@ -164,6 +164,16 @@ public class MainGame : MonoBehaviour
 
         }
 
+        else
+        {
+            // Game has ended, check for restart input
+            if (Input.GetKeyDown(KeyCode.R))
+            {
+                // Reset game state
+                ResetGameState();
+            }
+        }
+
         UpdateGameStateText();
 
     }
@@ -286,6 +296,26 @@ public class MainGame : MonoBehaviour
     {
         return position.x >= 0 && position.x < (Nx - 1) * spacing &&
                position.y >= 0 && position.y < (Ny - 1) * spacing;
+    }
+
+    void ResetGameState()
+    {
+        // Deactivate win text object
+        winTextObject.SetActive(false);
+
+        // Clear spheres list
+        foreach (GameObject sphere in spheres)
+        {
+            Destroy(sphere);
+        }
+        spheres.Clear();
+
+        // Reset current color and spherePlaced flag
+        currentColor = Color.red;
+        spherePlaced = false;
+
+        // Reset initial sphere and its position
+        CreateSphere(new Vector3(0, 0, 0), currentColor);
     }
 
 
