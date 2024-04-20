@@ -279,7 +279,7 @@ public class MainGame : MonoBehaviour
     // Function to notify winning player through UI
     void NotifyWinningPlayer(Color color)
     {
-        string winningPlayer = (color == playerColor) ? "Player" : "AI";
+        string winningPlayer = (color == playerColor) ? "AI" : "Player";
 
         winTextObject.SetActive(true);
         winTextObject.GetComponent<Text>().text = winningPlayer + " wins!";
