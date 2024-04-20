@@ -28,7 +28,7 @@ public class MainGame : MonoBehaviour
             {
                 GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
                 cube.transform.position = new Vector3(x * spacing, y * spacing, 0);
-                cube.transform.localScale = Vector3.one * 0.5f;
+                cube.transform.localScale = Vector3.one * 0.7f;
                 cubes[x, y] = cube; // Store reference to the cube in the array
             }
         }
