@@ -13,90 +13,9 @@ public class MainGame : MonoBehaviour
     GameObject[,] cubes; // 2D array to hold references to cubes
     List<GameObject> spheres = new List<GameObject>(); // List to hold references to spheres
     bool spherePlaced = false; // Flag to indicate if the sphere has been placed
-    Color currentColor = Color.red; // Initial color to spawn
+    Color playerColor = Color.red; // Player's color
+    Color aiColor = Color.blue; // AI's color
     public Text gameStateText; // Reference to the UI text object for displaying game state
-
-    public class GameStateSerializer
-    {
-        public static string SerializeGameState(MainGame mainGame)
-        {
-            StringBuilder sb = new StringBuilder();
-
-            // Append cube positions
-            foreach (GameObject cube in mainGame.cubes)
-            {
-                sb.Append(cube.transform.position.x).Append(",").Append(cube.transform.position.y).Append(",");
-            }
-
-            // Append sphere positions and colors
-            foreach (GameObject sphere in mainGame.spheres)
-            {
-                sb.Append(sphere.transform.position.x).Append(",").Append(sphere.transform.position.y).Append(",")
-                  .Append(sphere.GetComponent<Renderer>().material.color.r).Append(",")
-                  .Append(sphere.GetComponent<Renderer>().material.color.g).Append(",")
-                  .Append(sphere.GetComponent<Renderer>().material.color.b).Append(",");
-            }
-
-            // Append current sphere color and spherePlaced flag
-            sb.Append(mainGame.currentColor.r).Append(",")
-              .Append(mainGame.currentColor.g).Append(",")
-              .Append(mainGame.currentColor.b).Append(",")
-              .Append(mainGame.spherePlaced);
-
-            return sb.ToString();
-        }
-    }
-
-    public class GameStateDeserializer
-    {
-        public static void DeserializeGameState(string serializedGameState, MainGame mainGame)
-        {
-            // Clear previous game state
-            mainGame.spheres.Clear();
-
-            string[] data = serializedGameState.Split(',');
-
-            // Retrieve cube positions
-            int cubeIndex = 0;
-            for (int x = 0; x < mainGame.Nx; x++)
-            {
-                for (int y = 0; y < mainGame.Ny; y++)
-                {
-                    float posX = float.Parse(data[cubeIndex]);
-                    float posY = float.Parse(data[cubeIndex + 1]);
-                    mainGame.cubes[x, y].transform.position = new Vector3(posX, posY, 0);
-                    cubeIndex += 2;
-                }
-            }
-
-            // Retrieve sphere positions and colors
-            for (int i = cubeIndex; i < data.Length - 4; i += 5)
-            {
-                float posX = float.Parse(data[i]);
-                float posY = float.Parse(data[i + 1]);
-                float colorR = float.Parse(data[i + 2]);
-                float colorG = float.Parse(data[i + 3]);
-                float colorB = float.Parse(data[i + 4]);
-
-                Vector3 spherePosition = new Vector3(posX, posY, 0);
-                Color sphereColor = new Color(colorR, colorG, colorB);
-
-                GameObject newSphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-                newSphere.transform.position = spherePosition;
-                newSphere.GetComponent<Renderer>().material.color = sphereColor;
-
-                mainGame.spheres.Add(newSphere);
-            }
-
-            // Retrieve current sphere color and spherePlaced flag
-            float currentColorR = float.Parse(data[data.Length - 4]);
-            float currentColorG = float.Parse(data[data.Length - 3]);
-            float currentColorB = float.Parse(data[data.Length - 2]);
-            mainGame.currentColor = new Color(currentColorR, currentColorG, currentColorB);
-            mainGame.spherePlaced = bool.Parse(data[data.Length - 1]);
-        }
-    }
-
 
     void Start()
     {
@@ -109,76 +28,124 @@ public class MainGame : MonoBehaviour
             {
                 GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
                 cube.transform.position = new Vector3(x * spacing, y * spacing, 0);
-                cube.transform.localScale = Vector3.one * 0.5f;
+                cube.transform.localScale = Vector3.one * 0.7f;
                 cubes[x, y] = cube; // Store reference to the cube in the array
             }
         }
 
         // Creating the initial sphere and setting its initial position and color
-        CreateSphere(new Vector3(0, 0, 0), currentColor);
+        CreateSphere(new Vector3(0, 0, 0), aiColor); // Initial sphere is blue
     }
 
     void Update()
     {
         if (!spherePlaced)
         {
-            // Moving the sphere with W, A, S, D keys
-            Vector3 direction = Vector3.zero;
-            if (Input.GetKeyDown(KeyCode.W))
-            {
-                direction = Vector3.up;
-            }
-            else if (Input.GetKeyDown(KeyCode.S))
-            {
-                direction = Vector3.down;
-            }
-            else if (Input.GetKeyDown(KeyCode.A))
-            {
-                direction = Vector3.left;
-            }
-            else if (Input.GetKeyDown(KeyCode.D))
-            {
-                direction = Vector3.right;
-            }
-
-            // Move the sphere if a valid direction is pressed
-            if (direction != Vector3.zero)
-            {
-                MoveSphere(spheres[spheres.Count - 1], direction);
-            }
-
-            // Placing the sphere with 'E' key
-            if (Input.GetKeyDown(KeyCode.E))
-            {
-                // Toggle current color between red and blue
-                currentColor = (currentColor == Color.red) ? Color.blue : Color.red;
-
-                // Create a new sphere with the current color
-                CreateSphere(spheres[spheres.Count - 1].transform.position + Vector3.up * spacing, currentColor);
-
-                // Check for winning condition after placing the sphere
-                CheckWinCondition();
-            }
+            // Player's turn
+            HandlePlayerTurn();
         }
-
         else
         {
-            // Game has ended, check for restart input
-            if (Input.GetKeyDown(KeyCode.R))
+            // AI's turn
+            HandleAITurn();
+        }
+
+        UpdateGameStateText();
+    }
+
+    void HandlePlayerTurn()
+    {
+        // Moving the sphere with W, A, S, D keys
+        Vector3 direction = Vector3.zero;
+        if (Input.GetKeyDown(KeyCode.W))
+        {
+            direction = Vector3.up;
+        }
+        else if (Input.GetKeyDown(KeyCode.S))
+        {
+            direction = Vector3.down;
+        }
+        else if (Input.GetKeyDown(KeyCode.A))
+        {
+            direction = Vector3.left;
+        }
+        else if (Input.GetKeyDown(KeyCode.D))
+        {
+            direction = Vector3.right;
+        }
+
+        // Move the sphere if a valid direction is pressed
+        if (direction != Vector3.zero)
+        {
+            MoveSphere(spheres[spheres.Count - 1], direction);
+        }
+
+        // Placing the sphere with 'E' key
+        if (Input.GetKeyDown(KeyCode.E))
+        {
+            // Create a new sphere with the player's color
+            CreateSphere(spheres[spheres.Count - 1].transform.position + Vector3.up * spacing, playerColor);
+
+            // Check for winning condition after placing the sphere
+            CheckWinCondition();
+
+            // Set spherePlaced flag to true to indicate the end of the player's turn
+            spherePlaced = true;
+        }
+    }
+
+    void HandleAITurn()
+    {
+        // Implement AI turn using the minimax algorithm
+        // Placeholder code
+        // AI makes a random move for now
+        int bestMove = MiniMax();
+        int x = bestMove % Nx;
+        int y = bestMove / Nx;
+        Vector3 aiMovePosition = new Vector3(x * spacing, y * spacing, 0);
+
+        // Make sure the selected cube is not already occupied
+        if (!IsCubeOccupied(aiMovePosition))
+        {
+            // Create a new sphere for the AI player with the AI's color
+            CreateSphere(aiMovePosition, aiColor);
+
+            // Check for winning condition after AI places the sphere
+            CheckWinCondition();
+
+            // Set spherePlaced flag to false to indicate the end of the AI's turn
+            spherePlaced = false;
+        }
+        else
+        {
+            // Retry with a different random move if the selected cube is already occupied
+            HandleAITurn();
+        }
+    }
+
+    int MiniMax()
+    {
+        // Placeholder implementation of MiniMax algorithm
+        // Here you would implement the MiniMax algorithm to determine the best move for the AI player
+        // For now, it just returns a random valid move
+        List<int> validMoves = new List<int>();
+        for (int x = 0; x < Nx; x++)
+        {
+            for (int y = 0; y < Ny; y++)
             {
-                // Reset game state
-                ResetGameState();
+                if (!IsCubeOccupied(new Vector3(x * spacing, y * spacing, 0)))
+                {
+                    validMoves.Add(x + y * Nx);
+                }
             }
         }
-        
-        UpdateGameStateText();
-    
+        return validMoves[Random.Range(0, validMoves.Count)];
     }
 
     void UpdateGameStateText()
     {
         // Serialize the game state
-        string serializedGameState = GameStateSerializer.SerializeGameState(this);
+        string serializedGameState = SerializeGameState();
 
         // Update the UI text object with the serialized game state
         if (gameStateText != null)
@@ -312,10 +279,10 @@ public class MainGame : MonoBehaviour
     // Function to notify winning player through UI
     void NotifyWinningPlayer(Color color)
     {
-        string winningPlayer = (color == Color.red) ? "Red" : "Blue";
+        string winningPlayer = (color == playerColor) ? "Player" : "AI";
 
         winTextObject.SetActive(true);
-        winTextObject.GetComponent<Text>().text = "Player " + winningPlayer + " wins!";
+        winTextObject.GetComponent<Text>().text = winningPlayer + " wins!";
         spherePlaced = true; // Stop further sphere placements
     }
 
@@ -324,6 +291,34 @@ public class MainGame : MonoBehaviour
     {
         return position.x >= 0 && position.x < (Nx - 1) * spacing &&
                position.y >= 0 && position.y < (Ny - 1) * spacing;
+    }
+
+    string SerializeGameState()
+    {
+        StringBuilder sb = new StringBuilder();
+
+        // Append cube positions
+        foreach (GameObject cube in cubes)
+        {
+            sb.Append(cube.transform.position.x).Append(",").Append(cube.transform.position.y).Append(",");
+        }
+
+        // Append sphere positions and colors
+        foreach (GameObject sphere in spheres)
+        {
+            sb.Append(sphere.transform.position.x).Append(",").Append(sphere.transform.position.y).Append(",")
+              .Append(sphere.GetComponent<Renderer>().material.color.r).Append(",")
+              .Append(sphere.GetComponent<Renderer>().material.color.g).Append(",")
+              .Append(sphere.GetComponent<Renderer>().material.color.b).Append(",");
+        }
+
+        // Append current sphere color and spherePlaced flag
+        sb.Append(playerColor.r).Append(",")
+          .Append(playerColor.g).Append(",")
+          .Append(playerColor.b).Append(",")
+          .Append(spherePlaced);
+
+        return sb.ToString();
     }
 
     void ResetGameState()
@@ -337,9 +332,9 @@ public class MainGame : MonoBehaviour
         }
         spheres.Clear();
         // Reset current color and spherePlaced flag
-        currentColor = Color.red;
+        playerColor = Color.red;
         spherePlaced = false;
         // Reset initial sphere and its position
-        CreateSphere(new Vector3(0, 0, 0), currentColor);
+        CreateSphere(new Vector3(0, 0, 0), aiColor); // Initial sphere is blue
     }
 }
