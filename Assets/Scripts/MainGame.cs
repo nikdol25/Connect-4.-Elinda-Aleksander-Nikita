@@ -39,7 +39,11 @@ public class MainGame : MonoBehaviour
 
     void Update()
     {
-        if (!spherePlaced)
+        if (Input.GetKeyDown(KeyCode.R))
+        {
+            ResetGameState();
+        }
+        else if (!spherePlaced)
         {
             // Player's turn
             HandlePlayerTurn();
